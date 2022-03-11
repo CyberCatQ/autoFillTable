@@ -18,7 +18,7 @@ program_file_path = os.path.dirname(os.path.abspath(__file__))
 class MyMainForm(QDialog, Ui_TableGenerate):
     def __init__(self, parent=None) -> None:
         super(MyMainForm, self).__init__(parent=parent)
-        self.setWindowTitle('Table Generater v1.0')
+        self.setWindowTitle('Table Generator v1.1')
         self.setupUi(self)
         self.text_property = self.findChildren(QLineEdit)
         self.spin_property = self.findChildren(QDoubleSpinBox)
@@ -97,7 +97,8 @@ class MyMainForm(QDialog, Ui_TableGenerate):
                 obj.setText(info_dict[obj.objectName()])
             except KeyError:
                 continue
-        
+        if not info_dict['No']:
+            info_dict['No'] = '0'
         self.No.setText(str(int(info_dict['No']) + 1).rjust(9, '0'))
             
         for obj in self.spin_property:
@@ -143,8 +144,11 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             self.output_dir = os.getcwd()
         self.generate_filename()
         generator.table_generate(dic, self.docx_filepath)
-        self.trans_doc_pdf()
-        self.status_label.setText("表单文件 %s 已生成" % self.pdf_filepath)
+        self.status_label.setText("表单文件 %s 已生成" % self.docx_filepath)
+        if self.pdf_check.isChecked():
+            self.trans_doc_pdf()
+            self.status_label.setText("表单文件 %s 已生成" % self.pdf_filepath)
+        
         self.No.setText(str(int(self.No.text()) + 1).rjust(9, '0'))
 
 if __name__ == '__main__':
