@@ -3,8 +3,8 @@ import os
 import json
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QComboBox, QDateEdit, QDialog, QDoubleSpinBox, QLineEdit
-from tablegenerater_UI import Ui_TableGenerate
-import generater
+from tablegenerator_UI import Ui_TableGenerate
+import generator
 from datetime import datetime
 from win32com.client import Dispatch
 
@@ -70,7 +70,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
 
         money = '%.2f' % dic['total_money']
         dic['total_money'] = str(money)
-        num_list = generater.number_transfer(money)
+        num_list = generator.number_transfer(money)
         money_CN_list = ['money_penny','money_cent', 'money_one', 'money_ten', 'money_h', 'money_t', 'money_tt']
         i = -1
         for t in money_CN_list:
@@ -142,7 +142,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         else:
             self.output_dir = os.getcwd()
         self.generate_filename()
-        generater.table_generate(dic, self.docx_filepath)
+        generator.table_generate(dic, self.docx_filepath)
         self.trans_doc_pdf()
         self.status_label.setText("表单文件 %s 已生成" % self.pdf_filepath)
         self.No.setText(str(int(self.No.text()) + 1).rjust(9, '0'))
