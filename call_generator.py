@@ -148,8 +148,9 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         if self.pdf_check.isChecked():
             self.trans_doc_pdf()
             self.status_label.setText("表单文件 %s 已生成" % self.pdf_filepath)
-        
-        self.No.setText(str(int(self.No.text()) + 1).rjust(9, '0'))
+
+        current_No = self.No.text() if self.No.text() else '0'
+        self.No.setText(str(int(current_No) + 1).rjust(9, '0'))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
