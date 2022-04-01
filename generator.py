@@ -93,7 +93,7 @@ def table_generate(data_dict: dict, file_name=''):
         self_fee = default_dic['self_fee_value'],
         money_tt = default_dic['money_tt'],
         money_ten = default_dic['money_ten'],
-        No = default_dic['No']
+        No = default_dic['Code_No']
     )
     template.write(file_name)
 

@@ -1,12 +1,14 @@
 import sys
 import os
 import json
+import win10toast
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QComboBox, QDateEdit, QDialog, QDoubleSpinBox, QLineEdit
 from tablegenerator_UI import Ui_TableGenerate
 import generator
 from datetime import datetime
-from win32com.client import Dispatch
+from docx import Document
+from docxcompose.composer import Composer
 
 date = datetime.now()
 year = str(date.year)
@@ -18,7 +20,7 @@ program_file_path = os.path.dirname(os.path.abspath(__file__))
 class MyMainForm(QDialog, Ui_TableGenerate):
     def __init__(self, parent=None) -> None:
         super(MyMainForm, self).__init__(parent=parent)
-        self.setWindowTitle('Table Generator v1.1')
+        self.setWindowTitle('Table Generator v1.2')
         self.setupUi(self)
         self.text_property = self.findChildren(QLineEdit)
         self.spin_property = self.findChildren(QDoubleSpinBox)
@@ -31,19 +33,24 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.last_log_file = program_file_path + os.sep + 'last_info.json'
         if os.path.exists(self.last_log_file):
             self.load_info()
+        if not self.Code_No.text():
+            self.Code_No.setText('1'.rjust(9, '0'))
         
-        self.OK_Button.clicked.connect(self.tabel_generate)
+        self.OK_Button.clicked.connect(self.table_generate)
         self.toolButton.clicked.connect(self.open_path)
-        self.cancel_Button.clicked.connect(sys.exit)
         self.calcButton.clicked.connect(self.calc_sum)
+        self.pushButton_addmerge.clicked.connect(self.add_file_to_merge)
+        self.pushButton_merge.clicked.connect(self.merge_many_to_one)
+
+        self.files_to_merge = []
 
     @property
     def docx_filepath(self):
-        return self.output_dir + os.sep + self.filename + '.docx'
+        return self.output_dir + '/' + self.filename + '.docx'
 
     @property
     def pdf_filepath(self):
-        return self.output_dir + os.sep + self.filename + '.pdf' 
+        return self.output_dir + '/' + self.filename + '.pdf' 
 
     def save_info(self):
 
@@ -72,6 +79,8 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         dic['total_money'] = str(money)
         num_list = generator.number_transfer(money)
         money_CN_list = ['money_penny','money_cent', 'money_one', 'money_ten', 'money_h', 'money_t', 'money_tt']
+        for i in range(len(money_CN_list)):
+            dic[money_CN_list[i]] = '' 
         i = -1
         for t in money_CN_list:
             try:
@@ -97,23 +106,15 @@ class MyMainForm(QDialog, Ui_TableGenerate):
                 obj.setText(info_dict[obj.objectName()])
             except KeyError:
                 continue
-        if not info_dict['No']:
-            info_dict['No'] = '0'
-        self.No.setText(str(int(info_dict['No']) + 1).rjust(9, '0'))
+        if not info_dict['Code_No']:
+            info_dict['Code_No'] = '0'
+        self.Code_No.setText(str(int(info_dict['Code_No']) + 1).rjust(9, '0'))
             
         for obj in self.spin_property:
             obj.setValue(float(info_dict[obj.objectName()]))
         for obj in self.combobox_property:
             obj.setCurrentText(info_dict[obj.objectName()])
         self.dir_path.setText(info_dict[self.dir_path.objectName()])
-
-    def trans_doc_pdf(self):
-        
-        word = Dispatch('Word.Application')
-        doc = word.Documents.Open(self.docx_filepath)
-        doc.SaveAs(self.pdf_filepath, FileFormat = 17)
-        doc.Close()
-        word.Quit()
 
     def generate_filename(self):
         i = 1
@@ -136,7 +137,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             sum_value += i
         self.total_money.setValue(sum_value)
     
-    def tabel_generate(self):
+    def table_generate(self):
         dic = self.save_info()
         if dic['dir_path']:
             self.output_dir = dic['dir_path']
@@ -144,13 +145,38 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             self.output_dir = os.getcwd()
         self.generate_filename()
         generator.table_generate(dic, self.docx_filepath)
+        self._add_file_to_merge(self.docx_filepath)
         self.status_label.setText("表单文件 %s 已生成" % self.docx_filepath)
-        if self.pdf_check.isChecked():
-            self.trans_doc_pdf()
-            self.status_label.setText("表单文件 %s 已生成" % self.pdf_filepath)
+        current_No = int(self.Code_No.text())
+        self.Code_No.setText(str(current_No + 1).rjust(9, '0'))
+        
+    def _add_file_to_merge(self, file):
+        self.listWidget.addItem(file)
+        self.files_to_merge.append(file)
 
-        current_No = self.No.text() if self.No.text() else '0'
-        self.No.setText(str(int(current_No) + 1).rjust(9, '0'))
+    def add_file_to_merge(self):
+        file_dir = QtWidgets.QFileDialog.getOpenFileName(self, '选择文件', os.getcwd())
+        if file_dir[0]:
+            self._add_file_to_merge(file_dir[0])
+            self.status_label.setText("文件 %s 已添加" % file_dir[0].split('/')[-1])
+
+    def merge_many_to_one(self):
+
+        file_list = self.files_to_merge
+        output_file = self.output_dir + '/' + now + '_总.docx'
+
+        if len(file_list) == 0:
+            return
+
+        _page_break_docx = Document()
+        _page_break_docx.add_page_break()
+        # 保证样式一致
+        composer = Composer(Document(file_list[0]))
+        for file in file_list[1:]:
+            #composer.append(_page_break_docx)
+            composer.append(Document(file))
+        composer.save(output_file)
+        self.status_label.setText("表单文件 %s 已生成" % output_file)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
