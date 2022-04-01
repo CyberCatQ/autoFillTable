@@ -2,3 +2,4 @@ build/
 dist/
 *.json
 __pycache__
+test/

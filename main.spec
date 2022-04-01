@@ -4,7 +4,7 @@
 block_cipher = None
 
 
-a = Analysis(['call_generator.py'],
+a = Analysis(['main.py'],
              pathex=[],
              binaries=[('./template.docx','.')],
              datas=[],

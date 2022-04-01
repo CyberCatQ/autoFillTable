@@ -9,7 +9,6 @@
 
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QMovie
 program_file_path = os.path.dirname(os.path.abspath(__file__))
 
 class Ui_TableGenerate(object):
