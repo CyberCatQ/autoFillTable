@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+import pandas as pd
 
 from mailmerge import MailMerge
 from docx import Document
@@ -11,6 +12,10 @@ from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog,
                              QDoubleSpinBox, QLineEdit)
 
 from UI import Ui_TableGenerate
+
+import os
+import cv2
+from paddleocr import PPStructure, draw_structure_result, save_structure_res
 
 date = datetime.now()
 year = str(date.year)
@@ -138,6 +143,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.Code_No.setText('1'.rjust(9, '0'))
 
         self.file_to_merge = []
+        self.img_path = ''
 
         self.last_log_file = program_file_path + os.sep + 'last_info.json'
         if os.path.exists(self.last_log_file):
@@ -152,6 +158,9 @@ class MyMainForm(QDialog, Ui_TableGenerate):
     @property
     def docx_filepath(self):
         return self.output_dir + '/' + self.filename + '.docx'
+
+    def _get_file(self):
+        return QtWidgets.QFileDialog.getOpenFileName(self, '选择文件', os.getcwd())
 
     def save_info(self):
 
@@ -245,7 +254,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.file_to_merge.append(file_path)
     
     def add_exist_file(self):
-        file_path = QtWidgets.QFileDialog.getOpenFileName(self, '选择文件', os.getcwd())
+        file_path = self._get_file()
         if file_path[0]:
             self.add_to_merge(file_path[0])
 
@@ -277,5 +286,33 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         current_No = self.Code_No.text() if self.Code_No.text() else '0'
         self.Code_No.setText(str(int(current_No) + 1).rjust(9, '0'))
     
-    def ocr(self):
+    def get_img_excel_path(self):
         pass
+
+class OCR:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.file_type = self._check_type()
+        self.data = None
+
+    def _check_type(self):
+        suffix = self.file_path.split('.')[-1]
+        support_img_type = ['jpg', 'jpeg', 'png', 'bmp']
+        for i in support_img_type:
+            if i == suffix:
+                return 'img'
+
+        if self.file_path.endswith('.xlsx') or self.file_path.endswith('.xls'):
+            return 'excel'
+        
+        raise TypeError('不支持的文件类型')
+
+    def ocr(self):
+        table_engine = PPStructure(show_log=False)
+        #save_folder = self.dir_path.text() + '/excel'
+        img_path = self.file_path
+        img = cv2.imread(img_path)
+        result = table_engine(img)
+        #save_structure_res(result, save_folder, os.path.basename(img_path).split('.')[0])
+        self.data = pd.read_html(result[0]['res'][1])
+        
