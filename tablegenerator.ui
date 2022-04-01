@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Table Generator v1.0    -by Y.H.</string>
+   <string>Table Generator  v1.2</string>
   </property>
   <widget class="QToolButton" name="toolButton">
    <property name="geometry">
@@ -126,9 +126,9 @@
     <enum>QTabWidget::Rounded</enum>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
-   <widget class="QWidget" name="tab_5">
+   <widget class="QWidget" name="input_tab">
     <attribute name="title">
      <string>表单生成</string>
     </attribute>
@@ -463,7 +463,7 @@
      </item>
      <item>
       <property name="text">
-       <string>龙杭</string>
+       <string>龙航</string>
       </property>
      </item>
      <item>
@@ -1023,7 +1023,68 @@
      </property>
     </widget>
    </widget>
-   <widget class="QWidget" name="tab_6">
+   <widget class="QWidget" name="ocr_tab">
+    <attribute name="title">
+     <string>图像识别</string>
+    </attribute>
+    <widget class="QPushButton" name="pushButton">
+     <property name="geometry">
+      <rect>
+       <x>590</x>
+       <y>10</y>
+       <width>131</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>选择图片</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>440</x>
+       <y>10</y>
+       <width>121</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <item>
+      <property name="text">
+       <string/>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>龙航</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>顺捷</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>林翔</string>
+      </property>
+     </item>
+    </widget>
+    <widget class="QLabel" name="orc_network_label">
+     <property name="geometry">
+      <rect>
+       <x>360</x>
+       <y>10</y>
+       <width>81</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>网络单位</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="merge_tab">
     <attribute name="title">
      <string>表单合并</string>
     </attribute>
