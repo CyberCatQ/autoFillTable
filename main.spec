@@ -1,14 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-
-
+import os
+import sys
 block_cipher = None
-
+site_package_path = r"C:\Users\YH\AppData\Local\Programs\Python\Python310\Lib\site-packages"
 
 a = Analysis(['main.py'],
              pathex=[],
-             binaries=[('./template.docx','.')],
-             datas=[],
-             hiddenimports=[],
+             binaries=[('./template.docx','.'), ('./ico.ico','.')],
+             datas=[(os.path.join(site_package_path,'docx','templates'), 'docx/templates'), (os.path.join(site_package_path, 'docxcompose', 'templates'), 'docxcompose/templates')],
+             hiddenimports=['python-docx', 'docxcompose'],
              hookspath=[],
              hooksconfig={},
              runtime_hooks=[],
@@ -24,7 +24,7 @@ exe = EXE(pyz,
           a.scripts, 
           [],
           exclude_binaries=True,
-          name='TabelGenerator',
+          name='TableGenerator',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -41,4 +41,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='TabelGenerator')
+               name='TableGenerator')
