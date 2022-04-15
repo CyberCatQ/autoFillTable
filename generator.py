@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-import pandas as pd
+import re
 
 from mailmerge import MailMerge
 from docx import Document
@@ -14,8 +14,7 @@ from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog,
 from UI import Ui_TableGenerate
 
 import os
-import cv2
-from paddleocr import PPStructure, draw_structure_result, save_structure_res
+from aip import AipOcr
 
 date = datetime.now()
 year = str(date.year)
@@ -40,7 +39,7 @@ fields = {'No',              # 红色编号
           'money_one',       # 大写金额：元
           'money_penny',     # 大写金额：分
           'money_t',         # 大写金额：仟
-          'money_ten',       # 大写金额：拾
+          'money_ten',       # 大写金额：拾1
           'money_tt',        # 大写金额：万
           'network_department',  # 网络单位
           'package',         # 包装
@@ -154,6 +153,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.calcButton.clicked.connect(self.calc_sum)
         self.pushButton_addmerge.clicked.connect(self.add_exist_file)
         self.pushButton_merge.clicked.connect(self.merge_files_in_list)
+        self.pushButton_ocr.clicked.connect(self.run_ocr)
 
     @property
     def docx_filepath(self):
@@ -286,14 +286,42 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         current_No = self.Code_No.text() if self.Code_No.text() else '0'
         self.Code_No.setText(str(int(current_No) + 1).rjust(9, '0'))
     
-    def get_img_excel_path(self):
+    def run_ocr(self):
+        file_path = self._get_file()
+        ocr = OCR(file_path[0])
+        ocr_data = ocr.ocr()
+
+class ParseConfig:
+    def __init__(self) -> None:
         pass
+    
+    def parse(self):
+        raise NotImplementedError
+
+class ChongQingCfg(ParseConfig):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def parse(self, words_result, number_result):
+        parse_result = []
+
+        for index, name in enumerate(words_result):
+            _index = index * 3
+            parse_result.append({'name': name, 'count': number_result[_index], 'weight': number_result[_index + 1], 'price': number_result[_index + 2]})
+        
+        return parse_result
 
 class OCR:
-    def __init__(self, file_path):
+    def __init__(self, file_path, ocr_cfg) -> None:
         self.file_path = file_path
         self.file_type = self._check_type()
         self.data = None
+        self.ocr_cfg = ocr_cfg
+
+        app_id = '25890848'
+        api_key = '6VGCcSckGdlVgMtXPXrLo47y'
+        secret_key = 'i3Xhu52mreGEPhHRXPI97SZGymjtIn0K'
+        self.client = AipOcr(app_id, api_key, secret_key)
 
     def _check_type(self):
         suffix = self.file_path.split('.')[-1]
@@ -308,11 +336,11 @@ class OCR:
         raise TypeError('不支持的文件类型')
 
     def ocr(self):
-        table_engine = PPStructure(show_log=False)
-        #save_folder = self.dir_path.text() + '/excel'
-        img_path = self.file_path
-        img = cv2.imread(img_path)
-        result = table_engine(img)
-        #save_structure_res(result, save_folder, os.path.basename(img_path).split('.')[0])
-        self.data = pd.read_html(result[0]['res'][1])
-        
+        if self.file_type == 'img':
+            with open(self.file_path, 'rb') as f:
+                img = f.read()
+            ocr_result = self.client.form(img)
+            words_result = [dic['words'] for dic in ocr_result['forms_result'][0]['body'] if re.match(r'[\u4e00-\u9fa5]', dic['words'])]
+            number_result = [dic['words'] for dic in ocr_result['forms_result'][0]['body'] if re.match(r'[0-9]', dic['words'])]
+            
+            return self.ocr_cfg.parse(words_result, number_result)

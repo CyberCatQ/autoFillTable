@@ -1027,7 +1027,7 @@
     <attribute name="title">
      <string>图像识别</string>
     </attribute>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="pushButton_ocr">
      <property name="geometry">
       <rect>
        <x>590</x>
