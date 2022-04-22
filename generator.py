@@ -1,155 +1,40 @@
 import json
 import os
-from datetime import datetime
-import re
 
-from mailmerge import MailMerge
 from docx import Document
 from docxcompose.composer import Composer
+from mailmerge import MailMerge
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog, QDoubleSpinBox,
+                             QLineEdit)
 
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog,
-                             QDoubleSpinBox, QLineEdit)
+from _config import __version__, fields, now, number_dict, program_file_path
+from _ocr import OCR
+from _UI import Ui_TableGenerate
 
-from UI import Ui_TableGenerate
+default_dic = {k : '' for k in fields}
 
-import os
-from aip import AipOcr
-
-date = datetime.now()
-year = str(date.year)
-month = str(date.month)
-day = str(date.day)
-now = year + month.rjust(2, '0') + day.rjust(2, '0')
-program_file_path = os.path.dirname(os.path.abspath(__file__))
-
-fields = {'No',              # 红色编号
-          'add',             # 送货地址
-          'agency_fund',     # 代收款
-          'code',            # 单号
-          'count',           # 数量
-          'date_day',        # 日期：日
-          'date_month',      # 日期：月
-          'date_year',       # 日期：年
-          'delivery_cost',   # 配送费
-          'goods_name',      # 品名
-          'money',           # 金额(小写)
-          'money_cent',      # 大写金额：角
-          'money_h',         # 大写金额：佰
-          'money_one',       # 大写金额：元
-          'money_penny',     # 大写金额：分
-          'money_t',         # 大写金额：仟
-          'money_ten',       # 大写金额：拾1
-          'money_tt',        # 大写金额：万
-          'network_department',  # 网络单位
-          'package',         # 包装
-          'payment_method',  # 支付方式
-          'people_name',     # 收货人姓名
-          'phone_number',    # 电话
-          'self_fee',        # 自提费
-          'start_add',       # 始发站
-          'transfer_fee',    # 中转费
-          'weight'}          # 重量
-
-default_dic = {}
-for index in fields:
-    default_dic[index] = ''
-
-number_dict = {
-    '1': '一',
-    '2': '二',
-    '3': '三',
-    '4': '四',
-    '5': '五',
-    '6': '六',
-    '7': '七',
-    '8': '八',
-    '9': '九',
-    '0': '零',
-}
-
-
-def _table_generate(data_dict: dict, file_name=''):
-    date = data_dict['dateEdit'].split(':')
-    data_dict['date_day'] = date[2]
-    data_dict['date_month'] = date[1]
-    data_dict['date_year'] = date[0]
-    
-    for key, value in data_dict.items():
-        data_dict[key] = str(value)
-        
-    default_dic.update(data_dict)
-    if not os.path.exists('template.docx'):
-        raise FileNotFoundError('No template.docx found.')
-        
-    template = MailMerge('template.docx')
-    template.merge(
-        count = default_dic['count'],
-        date_month = default_dic['date_month'],
-        date_day = default_dic['date_day'],
-        money_one = default_dic['money_one'],
-        package = default_dic['package_value'],
-        transfer_fee = default_dic['transfer_fee_value'],
-        start_add = default_dic['start_add'],
-        money_h = default_dic['money_h'],
-        agency_fund = default_dic['agency_fund_value'],
-        delivery_cost = default_dic['delivery_cost_value'],
-        code = default_dic['code'],
-        payment_method = default_dic['payment_method'],
-        network_department = default_dic['network_department'],
-        money = default_dic['total_money'],
-        goods_name = default_dic['goods_name'],
-        money_t = default_dic['money_t'],
-        money_penny = default_dic['money_penny'],
-        date_year = default_dic['date_year'],
-        add = default_dic['add'],
-        weight = default_dic['weight'],
-        people_name = default_dic['people_name'],
-        money_cent = default_dic['money_cent'],
-        phone_number = default_dic['phone_number'],
-        self_fee = default_dic['self_fee_value'],
-        money_tt = default_dic['money_tt'],
-        money_ten = default_dic['money_ten'],
-        No = default_dic['Code_No']
-    )
-    template.write(file_name)
-
-
-def _number_transfer(number: str):
-    number = str(number)
-    listnum = list(number)
-    result = []
-    for i in listnum:
-        if i == '.':
-            continue
-        result.append(number_dict[i])
-
-    return result
-
-    
 class MyMainForm(QDialog, Ui_TableGenerate):
     def __init__(self, parent=None) -> None:
         super(MyMainForm, self).__init__(parent=parent)
-        self.setWindowTitle('Table Generator v1.1')
+        self.setWindowTitle(f'Table Generator v{__version__}')
+        self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.setupUi(self)
+
         self.text_property = self.findChildren(QLineEdit)
         self.spin_property = self.findChildren(QDoubleSpinBox)
         self.date_property = self.findChildren(QDateEdit)
         self.combobox_property = self.findChildren(QComboBox)
 
         self.output_dir = os.getcwd()
-        self.filename = now + '_' + '1'
-        self.Code_No.setText('1'.rjust(9, '0'))
+        self.output_file = f'{now}_1.docx'
 
         self.file_to_merge = []
         self.img_path = ''
+        self.last_log_file = os.path.join(program_file_path, 'last_log.json')
 
-        self.last_log_file = program_file_path + os.sep + 'last_info.json'
-        if os.path.exists(self.last_log_file):
-            self.load_info()
-        
-        self.OK_Button.clicked.connect(self.tabel_generate)
-        self.toolButton.clicked.connect(self.open_path)
+        self.OK_Button.clicked.connect(self.table_generate)
+        self.toolButton.clicked.connect(self.get_dir_path)
         self.calcButton.clicked.connect(self.calc_sum)
         self.pushButton_addmerge.clicked.connect(self.add_exist_file)
         self.pushButton_merge.clicked.connect(self.merge_files_in_list)
@@ -157,13 +42,29 @@ class MyMainForm(QDialog, Ui_TableGenerate):
 
     @property
     def docx_filepath(self):
-        return self.output_dir + '/' + self.filename + '.docx'
+        return os.path.join(self.output_dir, self.output_file)
+
+    @staticmethod
+    def _number_transfer(number: str):
+        number = str(number)
+        number_splits = number.split('.')
+        number_int = number_splits[0]
+        number_dec = number_splits[1].ljust(2, '0')
+        int_dict = ['money_one', 'money_ten', 'money_h', 'money_t', 'money_tt']
+        dec_dict = ['money_dime', 'money_cent']
+        result = {k: '' for k in [*int_dict, *dec_dict]}
+
+        for index, num in enumerate(number_int[::-1]):
+            result[int_dict[index]] = number_dict[num]
+        for index, num in enumerate(number_dec):
+            result[dec_dict[index]] = number_dict[num]
+        return result
 
     def _get_file(self):
         return QtWidgets.QFileDialog.getOpenFileName(self, '选择文件', os.getcwd())
 
     def save_info(self):
-
+        # 保存UI数据到文件
         dic = {}
         for obj in self.text_property:
             dic[obj.objectName()] = obj.text()
@@ -173,9 +74,10 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             dic[obj.objectName()] = obj.dateTime().toString('yyyy:MM:dd')
         for obj in self.combobox_property:
             dic[obj.objectName()] = obj.currentText()
-        dic[self.dir_path.objectName()] = self.dir_path.text()
-
         dic['count'] = int(dic['count'])
+        dic['Code_No'] = dic['Code_No'].rjust(9, '0') if dic['Code_No'] else '1'.rjust(9, '0')
+        money = str('%.2f' % dic['total_money'])
+        dic['total_money'] = str(money)
 
         if dic['network_department'] == '其他...':
             dic['network_department'] = dic['network_department_other']
@@ -185,70 +87,67 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             dic['start_add'] = dic['start_add_other']
             dic.pop('start_add_other')
 
-        money = '%.2f' % dic['total_money']
-        dic['total_money'] = str(money)
-        num_list = _number_transfer(money)
-        money_CN_list = ['money_penny','money_cent', 'money_one', 'money_ten', 'money_h', 'money_t', 'money_tt']
+        num_transfered_dict = self._number_transfer(money)
+        money_CN_list = ['money_dime','money_cent', 'money_one', 'money_ten', 'money_h', 'money_t', 'money_tt']
         for key in money_CN_list:
             dic[key] = ''
+        dic.update(num_transfered_dict)
 
-        i = -1
-        for t in money_CN_list:
-            try:
-                dic[t] = num_list[i]
-                i -= 1
-            except IndexError:
-                break
-
-        with open('last_info.json', 'w') as f:
+        with open(self.last_log_file, 'w') as f:
             f.write(json.dumps(dic))
 
-        return dic
-
-    def load_info(self):
-        with open(self.last_log_file) as f:
+    def load_info(self, file_path):
+        # load数据到UI
+        with open(file_path) as f:
             info_dict = json.load(f)
 
         info_dict['network_department_other'] = ''
         info_dict['start_add_other'] = ''
-            
+        info_dict['Code_No'] = info_dict['Code_No'] if info_dict['Code_No'] else '1'.rjust(9, '0')
+
         for obj in self.text_property:
             try:
                 obj.setText(info_dict[obj.objectName()])
             except KeyError:
                 continue
-        if not info_dict['Code_No']:
-            info_dict['Code_No'] = '0'
-        self.Code_No.setText(str(int(info_dict['Code_No']) + 1).rjust(9, '0'))
-            
         for obj in self.spin_property:
             obj.setValue(float(info_dict[obj.objectName()]))
         for obj in self.combobox_property:
             obj.setCurrentText(info_dict[obj.objectName()])
-        self.dir_path.setText(info_dict[self.dir_path.objectName()])
-
-    def generate_filename(self):
+    
+    def _get_output_file_name(self):
         i = 1
         while True:
-            self.filename = now + '_' + str(i)
-            if os.path.exists(self.docx_filepath):
+            filename = f'{now}_{i}.docx'
+            if os.path.exists(os.path.join(self.output_dir, filename)):
                 i += 1
             else:
-                break
+                self.output_file = filename
+                yield filename
 
-    def open_path(self):
+    def read_info(self, file_path):
+        # 从json文件读取数据
+        with open(file_path) as f:
+            info_dict = json.load(f)
+        return info_dict
+
+    def get_dir_path(self):
         file_dir= QtWidgets.QFileDialog.getExistingDirectory(self, "选择保存位置", os.getcwd())
         if file_dir:
             self.dir_path.setText(file_dir)
     
     def calc_sum(self):
-        l = [self.package_value.value(),self.agency_fund_value.value(), self.self_fee_value.value(), self.transfer_fee_value.value(), self.delivery_cost_value.value()]
-        sum_value = 0.0
-        for i in l:
-            i = float(i)
-            sum_value += i
+        _total = [
+            self.package_value.value(), 
+            self.agency_fund_value.value(), 
+            self.self_fee_value.value(), 
+            self.transfer_fee_value.value(), 
+            self.delivery_cost_value.value()
+            ]
+        sum_value = sum(map(lambda x: x if x else 0.0, _total))
         self.total_money.setValue(sum_value)
     
+    # DOC合并部分
     def add_to_merge(self, file_path):
         self.listWidget.addItem(file_path)
         self.file_to_merge.append(file_path)
@@ -259,8 +158,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             self.add_to_merge(file_path[0])
 
     def merge_files_in_list(self):
-        result_file = self.dir_path.text() + '/' + now + '_总.docx'
-        
+        result_file = os.path.join(self.output_dir, f'{now}_总.docx')
         if not self.file_to_merge:
             return
         else:
@@ -268,21 +166,62 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             composer = Composer(merged_docx)
             for i in self.file_to_merge[1:]:
                 composer.append(Document(i))
-
             composer.save(result_file)
             self.status_label.setText("表单文件 %s 已生成" % result_file)
 
-    def tabel_generate(self):
-        dic = self.save_info()
-        if dic['dir_path']:
-            self.output_dir = dic['dir_path']
-        else:
-            self.output_dir = os.getcwd()
-        self.generate_filename()
-        _table_generate(dic, self.docx_filepath)
-        self.status_label.setText("表单文件 %s 已生成" % self.docx_filepath)
+    # 单个表格文件生成部分
+    def _table_generate(self, data_dict: dict, output_file_path=None):
+        date = data_dict['dateEdit'].split(':')
+        data_dict['date_year'], data_dict['date_month'], data_dict['date_day'] = date
+        data_dict = {k : str(v) for k, v in data_dict.items()}
+        default_dic.update(data_dict)
+
+        if not os.path.exists('template.docx'):
+            raise FileNotFoundError('template.docx is not found.')
+            
+        template = MailMerge('template.docx')
+        template.merge(
+            count = default_dic['count'],
+            date_month = default_dic['date_month'],
+            date_day = default_dic['date_day'],
+            money_one = default_dic['money_one'],
+            package = default_dic['package_value'],
+            transfer_fee = default_dic['transfer_fee_value'],
+            start_add = default_dic['start_add'],
+            money_h = default_dic['money_h'],
+            agency_fund = default_dic['agency_fund_value'],
+            delivery_cost = default_dic['delivery_cost_value'],
+            code = default_dic['code'],
+            payment_method = default_dic['payment_method'],
+            network_department = default_dic['network_department'],
+            money = default_dic['total_money'],
+            goods_name = default_dic['goods_name'],
+            money_t = default_dic['money_t'],
+            money_penny = default_dic['money_penny'],
+            date_year = default_dic['date_year'],
+            add = default_dic['add'],
+            weight = default_dic['weight'],
+            people_name = default_dic['people_name'],
+            money_cent = default_dic['money_cent'],
+            phone_number = default_dic['phone_number'],
+            self_fee = default_dic['self_fee_value'],
+            money_tt = default_dic['money_tt'],
+            money_ten = default_dic['money_ten'],
+            Code_No = default_dic['Code_No']
+        )
+        template.write(output_file_path)
+
+    def table_generate(self):
+        self.save_info()
+        data_dict = self.read_info(self.last_log_file)
+        self.output_dir = data_dict['dir_path'] if data_dict['dir_path'] else os.getcwd()
+        self.output_file = self._get_output_file_name()
+
+        self._table_generate(data_dict, self.docx_filepath)
+        self.status_label.setText(f"表单文件{self.docx_filepath}已生成")
         self.add_to_merge(os.path.abspath(self.docx_filepath))
 
+        # 序号自动增加
         current_No = self.Code_No.text() if self.Code_No.text() else '0'
         self.Code_No.setText(str(int(current_No) + 1).rjust(9, '0'))
     
@@ -290,57 +229,3 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         file_path = self._get_file()
         ocr = OCR(file_path[0])
         ocr_data = ocr.ocr()
-
-class ParseConfig:
-    def __init__(self) -> None:
-        pass
-    
-    def parse(self):
-        raise NotImplementedError
-
-class ChongQingCfg(ParseConfig):
-    def __init__(self) -> None:
-        super().__init__()
-    
-    def parse(self, words_result, number_result):
-        parse_result = []
-
-        for index, name in enumerate(words_result):
-            _index = index * 3
-            parse_result.append({'name': name, 'count': number_result[_index], 'weight': number_result[_index + 1], 'price': number_result[_index + 2]})
-        
-        return parse_result
-
-class OCR:
-    def __init__(self, file_path, ocr_cfg) -> None:
-        self.file_path = file_path
-        self.file_type = self._check_type()
-        self.data = None
-        self.ocr_cfg = ocr_cfg
-
-        app_id = '25890848'
-        api_key = '6VGCcSckGdlVgMtXPXrLo47y'
-        secret_key = 'i3Xhu52mreGEPhHRXPI97SZGymjtIn0K'
-        self.client = AipOcr(app_id, api_key, secret_key)
-
-    def _check_type(self):
-        suffix = self.file_path.split('.')[-1]
-        support_img_type = ['jpg', 'jpeg', 'png', 'bmp']
-        for i in support_img_type:
-            if i == suffix:
-                return 'img'
-
-        if self.file_path.endswith('.xlsx') or self.file_path.endswith('.xls'):
-            return 'excel'
-        
-        raise TypeError('不支持的文件类型')
-
-    def ocr(self):
-        if self.file_type == 'img':
-            with open(self.file_path, 'rb') as f:
-                img = f.read()
-            ocr_result = self.client.form(img)
-            words_result = [dic['words'] for dic in ocr_result['forms_result'][0]['body'] if re.match(r'[\u4e00-\u9fa5]', dic['words'])]
-            number_result = [dic['words'] for dic in ocr_result['forms_result'][0]['body'] if re.match(r'[0-9]', dic['words'])]
-            
-            return self.ocr_cfg.parse(words_result, number_result)
