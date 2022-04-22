@@ -18,8 +18,8 @@ class MyMainForm(QDialog, Ui_TableGenerate):
     def __init__(self, parent=None) -> None:
         super(MyMainForm, self).__init__(parent=parent)
         self.setWindowTitle(f'Table Generator v{__version__}')
-        self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.setupUi(self)
+        self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
 
         self.text_property = self.findChildren(QLineEdit)
         self.spin_property = self.findChildren(QDoubleSpinBox)
@@ -79,6 +79,9 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         money = str('%.2f' % dic['total_money'])
         dic['total_money'] = str(money)
 
+        if not dic['Code_No']:
+            dic['Code_No'] = '1'.rjust(9, '0')
+
         if dic['network_department'] == '其他...':
             dic['network_department'] = dic['network_department_other']
             dic.pop('network_department_other')
@@ -123,7 +126,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
                 i += 1
             else:
                 self.output_file = filename
-                yield filename
+                return filename
 
     def read_info(self, file_path):
         # 从json文件读取数据
@@ -197,7 +200,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
             money = default_dic['total_money'],
             goods_name = default_dic['goods_name'],
             money_t = default_dic['money_t'],
-            money_penny = default_dic['money_penny'],
+            money_dime = default_dic['money_dime'],
             date_year = default_dic['date_year'],
             add = default_dic['add'],
             weight = default_dic['weight'],
@@ -222,7 +225,7 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.add_to_merge(os.path.abspath(self.docx_filepath))
 
         # 序号自动增加
-        current_No = self.Code_No.text() if self.Code_No.text() else '0'
+        current_No = self.Code_No.text() if self.Code_No.text() else '1'
         self.Code_No.setText(str(int(current_No) + 1).rjust(9, '0'))
     
     def run_ocr(self):

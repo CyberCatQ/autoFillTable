@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'UI.ui'
+# Form implementation generated from reading ui file '.\UI.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.6
 #
@@ -79,7 +79,7 @@ class Ui_TableGenerate(object):
         font.setPointSize(13)
         self.dateEdit.setFont(font)
         self.dateEdit.setCalendarPopup(True)
-        self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.dateEdit.setDate(QtCore.QDate(2000, 1, 2))
         self.dateEdit.setObjectName("dateEdit")
         self.package_value = QtWidgets.QDoubleSpinBox(self.input_tab)
         self.package_value.setGeometry(QtCore.QRect(460, 170, 91, 31))
@@ -429,7 +429,7 @@ class Ui_TableGenerate(object):
         self.status_label.raise_()
 
         self.retranslateUi(TableGenerate)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         self.network_department.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(TableGenerate)
         TableGenerate.setTabOrder(self.dateEdit, self.network_department)
