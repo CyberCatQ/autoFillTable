@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Table Generator  v1.2</string>
+   <string>Table Generator</string>
   </property>
   <widget class="QToolButton" name="toolButton">
    <property name="geometry">
@@ -1040,7 +1040,7 @@
       <string>选择图片</string>
      </property>
     </widget>
-    <widget class="QComboBox" name="comboBox">
+    <widget class="QComboBox" name="ocr_network">
      <property name="geometry">
       <rect>
        <x>440</x>
@@ -1081,6 +1081,54 @@
      </property>
      <property name="text">
       <string>网络单位</string>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="ocr_info_table">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>50</y>
+       <width>701</width>
+       <height>421</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="ocr_label">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>10</y>
+       <width>121</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>黑体</family>
+       <pointsize>13</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>图片识别信息</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::AutoText</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="ocr_button">
+     <property name="geometry">
+      <rect>
+       <x>590</x>
+       <y>523</y>
+       <width>131</width>
+       <height>32</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>生成</string>
      </property>
     </widget>
    </widget>
