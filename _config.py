@@ -57,15 +57,19 @@ class ParseConfig:
     def parse(self):
         raise NotImplementedError
 
-class ChongQingCfg(ParseConfig):
+class ShunJieCfg(ParseConfig):
     def __init__(self) -> None:
         super().__init__()
+        self.ADDRESS = '重庆'
+        self.CO_NAME = '顺捷'
     
     def parse(self, words_result, number_result):
         parse_result = []
 
         for index, name in enumerate(words_result):
             _index = index * 3
-            parse_result.append({'name': name, 'count': number_result[_index], 'weight': number_result[_index + 1], 'price': number_result[_index + 2]})
+            if name == '合计':
+                continue
+            parse_result.append({'name': name, 'count': number_result[_index], 'weight': number_result[_index + 1], 'agency_fund_value': number_result[_index + 2]})
         
         return parse_result

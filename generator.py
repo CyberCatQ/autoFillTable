@@ -6,9 +6,9 @@ from docxcompose.composer import Composer
 from mailmerge import MailMerge
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog, QDoubleSpinBox,
-                             QLineEdit)
+                             QLineEdit, QTableWidgetItem)
 
-from _config import __version__, fields, now, number_dict, program_file_path
+from _config import fields, __version__, now, program_file_path, number_dict, ShunJieCfg
 from _ocr import OCR
 from _UI import Ui_TableGenerate
 
@@ -20,18 +20,25 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.setWindowTitle(f'Table Generator v{__version__}')
         self.setupUi(self)
         self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.ocr_info_table.setColumnCount(4)
+        self.ocr_info_table.setHorizontalHeaderLabels(['收件人', '件数', '重量', '代收款'])
+        font = self.ocr_info_table.horizontalHeader().font()
+        font.setBold(True)
+        self.ocr_info_table.horizontalHeader().setFont(font)
+        self.ocr_info_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         self.text_property = self.findChildren(QLineEdit)
         self.spin_property = self.findChildren(QDoubleSpinBox)
         self.date_property = self.findChildren(QDateEdit)
         self.combobox_property = self.findChildren(QComboBox)
 
-        self.output_dir = os.getcwd()
         self.output_file = f'{now}_1.docx'
 
         self.file_to_merge = []
         self.img_path = ''
         self.last_log_file = os.path.join(program_file_path, 'last_log.json')
+        if os.path.exists(self.last_log_file):
+            self.load_info(self.last_log_file)
 
         self.OK_Button.clicked.connect(self.table_generate)
         self.toolButton.clicked.connect(self.get_dir_path)
@@ -39,6 +46,11 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.pushButton_addmerge.clicked.connect(self.add_exist_file)
         self.pushButton_merge.clicked.connect(self.merge_files_in_list)
         self.pushButton_ocr.clicked.connect(self.run_ocr)
+        self.ocr_button.clicked.connect(self.table_generate_from_ocr)
+
+    @property
+    def output_dir(self):
+        return self.dir_path.text() or os.getcwd()
 
     @property
     def docx_filepath(self):
@@ -217,7 +229,6 @@ class MyMainForm(QDialog, Ui_TableGenerate):
     def table_generate(self):
         self.save_info()
         data_dict = self.read_info(self.last_log_file)
-        self.output_dir = data_dict['dir_path'] if data_dict['dir_path'] else os.getcwd()
         self.output_file = self._get_output_file_name()
 
         self._table_generate(data_dict, self.docx_filepath)
@@ -228,7 +239,51 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         current_No = self.Code_No.text() if self.Code_No.text() else '1'
         self.Code_No.setText(str(int(current_No) + 1).rjust(9, '0'))
     
+    def get_ocr_cfg(self, network_department):
+        if network_department == '顺捷':
+            return ShunJieCfg()
+
     def run_ocr(self):
         file_path = self._get_file()
-        ocr = OCR(file_path[0])
-        ocr_data = ocr.ocr()
+        if file_path[0]:
+            self.ocr_info_table.clearContents()
+            ocr_department = self.ocr_network.currentText()
+            cfg = self.get_ocr_cfg(ocr_department)
+
+            ocr = OCR(file_path[0], cfg)
+            ocr_data = ocr.ocr()
+            for item in ocr_data:
+                row = self.ocr_info_table.rowCount()
+                self.ocr_info_table.insertRow(row)
+                for i, value in enumerate(item.values()):
+                    self.ocr_info_table.setItem(row, i, QTableWidgetItem(value))
+                
+    def read_ocr(self):
+        ocr_data = []
+        for row_index in range(self.ocr_info_table.rowCount()):
+            row_data = {}
+            row_data['people_name'] = self.ocr_info_table.item(row_index, 0).text()
+            row_data['count'] = self.ocr_info_table.item(row_index, 1).text()
+            row_data['weight'] = self.ocr_info_table.item(row_index, 2).text()
+            row_data['agency_fund_value'] = self.ocr_info_table.item(row_index, 3).text()
+            row_data['total_money'] = row_data['agency_fund_value']
+            ocr_data.append(row_data)
+
+        return ocr_data
+    
+    def table_generate_from_ocr(self):
+        final_ocr_data = self.read_ocr()
+        department = self.ocr_network.currentText()
+        ADD = self.get_ocr_cfg(department).ADDRESS
+
+        for index, data_dict in enumerate(final_ocr_data):
+            self.people_name.setText(data_dict['people_name'])
+            self.network_department.setCurrentText(department)
+            self.start_add.setCurrentText(ADD)
+            self.count.setValue(float(data_dict['count']))
+            self.weight.setValue(float(data_dict['weight']))
+            self.agency_fund_value.setValue(float(data_dict['agency_fund_value']))
+            self.total_money.setValue(float(data_dict['total_money']))
+            self.save_info()
+            self.output_file = self._get_output_file_name()
+            self.table_generate()
