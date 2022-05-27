@@ -73,3 +73,4 @@ class ShunJieCfg(ParseConfig):
             parse_result.append({'name': name, 'count': number_result[_index], 'weight': number_result[_index + 1], 'agency_fund_value': number_result[_index + 2]})
         
         return parse_result
+

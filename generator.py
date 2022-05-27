@@ -4,7 +4,7 @@ import os
 from docx import Document
 from docxcompose.composer import Composer
 from mailmerge import MailMerge
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtWidgets import (QComboBox, QDateEdit, QDialog, QDoubleSpinBox,
                              QLineEdit, QTableWidgetItem)
 
@@ -14,11 +14,24 @@ from _UI import Ui_TableGenerate
 
 default_dic = {k : '' for k in fields}
 
+class QSSLoader:
+    def __init__(self, file_path='style.qss') -> None:
+        self.file_path = file_path
+    
+    @staticmethod
+    def read_qss_file(file_path):
+        with open(file_path, 'r') as f:
+            return f.read()
+    
+    def get_style_sheet(self):
+        return self.read_qss_file(self.file_path)
+
 class MyMainForm(QDialog, Ui_TableGenerate):
     def __init__(self, parent=None) -> None:
         super(MyMainForm, self).__init__(parent=parent)
         self.setWindowTitle(f'Table Generator v{__version__}')
         self.setupUi(self)
+        self.beautify()
         self.dateEdit.setDateTime(QtCore.QDateTime.currentDateTime())
         self.ocr_info_table.setColumnCount(4)
         self.ocr_info_table.setHorizontalHeaderLabels(['收件人', '件数', '重量', '代收款'])
@@ -34,12 +47,18 @@ class MyMainForm(QDialog, Ui_TableGenerate):
 
         self.output_file = f'{now}_1.docx'
 
+        self._startPos = None
+        self. _endPos = None
+        self._isTracking = None
+
         self.file_to_merge = []
         self.img_path = ''
         self.last_log_file = os.path.join(program_file_path, 'last_log.json')
         if os.path.exists(self.last_log_file):
             self.load_info(self.last_log_file)
 
+        self.minimizeButton.clicked.connect(self.showMinimized)
+        self.closeButton.clicked.connect(QtCore.QCoreApplication.instance().quit)
         self.OK_Button.clicked.connect(self.table_generate)
         self.toolButton.clicked.connect(self.get_dir_path)
         self.calcButton.clicked.connect(self.calc_sum)
@@ -47,6 +66,34 @@ class MyMainForm(QDialog, Ui_TableGenerate):
         self.pushButton_merge.clicked.connect(self.merge_files_in_list)
         self.pushButton_ocr.clicked.connect(self.run_ocr)
         self.ocr_button.clicked.connect(self.table_generate_from_ocr)
+
+    def beautify(self):
+        self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        
+    # 鼠标移动事件
+    def mouseMoveEvent(self, a0: QtGui.QMouseEvent):
+        if self._startPos:
+            self._endPos = a0.pos() - self._startPos
+            # 移动窗口
+            self.move(self.pos() + self._endPos)
+    
+    # 鼠标按下事件
+    def mousePressEvent(self, a0: QtGui.QMouseEvent):
+        # 根据鼠标按下时的位置判断是否在QFrame范围内
+        if self.childAt(a0.pos().x(),a0.pos().y()).objectName() == "frame":
+            # 判断鼠标按下的是左键
+            if a0.button() == QtCore.Qt.LeftButton:
+                self._isTracking = True
+                # 记录初始位置
+                self._startPos = QtCore.QPoint(a0.x(), a0.y())
+
+    # 鼠标松开事件
+    def mouseReleaseEvent(self, a0: QtGui.QMouseEvent):
+        if a0.button() == QtCore.Qt.LeftButton:
+            self._isTracking = False
+            self._startPos = None
+            self._endPos = None
 
     @property
     def output_dir(self):
